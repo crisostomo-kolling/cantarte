@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galeria de Eventos Cantarte</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml"
+        href="https://raw.githubusercontent.com/feathericons/feather/master/icons/music.svg">
+    <script src="https://unpkg.com/papaparse@latest/papaparse.min.js"></script>
+    <style>
+        body {
+            background-color: #f3f4f6;
+        }
+
+        .card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .preview-img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 0.5rem;
+        }
+
+        .year-section {
+            margin-bottom: 2rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: white;
+            margin-top: 0.5rem;
+        }
+
+        .badge-apresentacao {
+            background-color: #DC143C;
+        }
+
+        .badge-confraternizacao {
+            background-color: #10b981;
+        }
+
+        .badge-aniversario {
+            background-color: #ec4899;
+        }
+
+        .badge-ensaio {
+            background-color: #f59e0b;
+        }
+
+        .filter-button {
+            padding: 0.5rem 1rem;
+            margin: 0.25rem;
+            border-radius: 0.25rem;
+            background-color: #e5e7eb;
+            color: #374151;
+            font-weight: 500;
+            transition: background-color 0.2s ease;
+        }
+
+        .filter-button:hover {
+            background-color: #d1d5db;
+        }
+
+        .filter-button.active {
+            background-color: #3b82f6;
+            color: white;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col items-center justify-center py-10">
+    <div class="container mx-auto px-4">
+        <h1 class="text-4xl font-bold text-center text-gray-800 mb-6">Galeria de Eventos Cantarte</h1>
+        <div id="filter-buttons" class="flex flex-wrap justify-center mb-6"></div>
+        <div id="loading" class="text-center text-gray-600">Carregando eventos...</div>
+        <div id="gallery" class="hidden"></div>
+    </div>
+    <script>
+        let events = [];
+        let currentFilter = 'all';
+
+        function renderGallery(filteredEvents) {
+            const gallery = document.getElementById('gallery');
+            gallery.innerHTML = '';
+            gallery.classList.remove('hidden');
+
+            // Group events by year
+            const groupedByYear = filteredEvents.reduce((acc, event) => {
+                if (!acc[event.year]) acc[event.year] = [];
+                acc[event.year].push(event);
+                return acc;
+            }, {});
+
+            // Render events
+            Object.keys(groupedByYear).sort((a, b) => b - a).forEach(year => {
+                const yearSection = document.createElement('div');
+                yearSection.className = 'year-section';
+                yearSection.innerHTML = `<h2 class="text-2xl font-bold text-gray-800 mb-4">${year}</h2>`;
+                const grid = document.createElement('div');
+                grid.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6';
+                groupedByYear[year].forEach(event => {
+                    const card = document.createElement('div');
+                    card.className = 'card bg-white rounded-lg shadow-md p-6';
+                    const dateStr = (event.month > 1 || event.day > 1) ? ` (${event.month.toString().padStart(2, '0')}/${event.day.toString().padStart(2, '0')})` : '';
+                    const categoryClass = event.category ? `badge badge-${event.category.toLowerCase().replace('ç', 'c').replace('ã', 'a')}` : '';
+                    const categoryBadge = event.category ? `<span class="${categoryClass}">${event.category}</span>` : '';
+                    const location = event.location ? `<p class="text-gray-600">Local: ${event.location}</p>` : '';
+                    const obs = event.location ? `<p class="text-gray-600" style="font-size: small;">${event.obs}</p>` : '';
+                    const cityState = event.city && event.state ? `<p class="text-gray-600">Cidade: ${event.city}, ${event.state}</p>` : '';
+                    card.innerHTML = `
+                        <a href="${event.url}" target="_blank" class="text-blue-500"><img src="${event.preview}" 
+                        onerror="this.src='https://media.istockphoto.com/id/873697356/vector/notes-on-the-swirl-music-decoration-element-isolated-on-the-white-background.jpg?s=612x612&w=0&k=20&c=30dBa07rS6h1f2iHx4JzMPFEDAfb4sy9FdEvzRMXpBM='"
+                        alt="${event.title}" class="preview-img mb-4">
+                        <h3 class="text-xl font-semibold text-gray-700">${event.title}${dateStr}</h3>
+                        ${obs}
+                        ${categoryBadge}
+                        ${location}
+                        ${cityState}
+                        </a>
+                    `;
+                    grid.appendChild(card);
+                });
+                yearSection.appendChild(grid);
+                gallery.appendChild(yearSection);
+            });
+        }
+
+        function updateFilterButtons(years) {
+            const filterButtons = document.getElementById('filter-buttons');
+            filterButtons.innerHTML = '';
+            const allButton = document.createElement('button');
+            allButton.className = `filter-button ${currentFilter === 'all' ? 'active' : ''}`;
+            allButton.textContent = 'Todos';
+            allButton.onclick = () => {
+                currentFilter = 'all';
+                document.querySelectorAll('.filter-button').forEach(btn => btn.classList.remove('active'));
+                allButton.classList.add('active');
+                renderGallery(events);
+            };
+            filterButtons.appendChild(allButton);
+
+            years.sort((a, b) => b - a).forEach(year => {
+                const yearCount = events.filter(event => event.year === year).length;
+                const button = document.createElement('button');
+                button.className = `filter-button ${currentFilter === year ? 'active' : ''}`;
+                button.textContent = `${year} (${yearCount})`;
+                //button.textContent = year;
+                button.onclick = () => {
+                    currentFilter = year;
+                    document.querySelectorAll('.filter-button').forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    const filteredEvents = events.filter(event => event.year === parseInt(year));
+                    renderGallery(filteredEvents);
+                };
+                filterButtons.appendChild(button);
+            });
+        }
+
+        // Fetch CSV from Google Sheets
+        // Substitua a linha do fetch por:
+        fetch('https://api.codetabs.com/v1/proxy/?quest=https://docs.google.com/spreadsheets/d/e/2PACX-1vR574JBcsphPozakpQEpz4BqG0eCBuoxTHlONDof5If3j7YH0fQPYeSKCJbIP7F23BXDFFOV7rGRvbQ/pub?output=csv')
+            .then(response => response.text())
+            .then(csvData => {
+                Papa.parse(csvData, {
+                    header: true,
+                    skipEmptyLines: true,
+                    transformHeader: header => header.trim().replace(/^"|"$/g, ''),
+                    transform: (value, header) => value.trim().replace(/^"|"$/g, ''),
+                    complete: (results) => {
+                        events = results.data.map(row => ({
+                            title: row["Titulo"],
+                            year: parseInt(row["Ano"]) || 0,
+                            month: parseInt(row["Mês"]) || 1,
+                            day: parseInt(row["Dia"]) || 1,
+                            url: row["Link"],
+                            preview: row["Capa"] || "https://media.istockphoto.com/id/873697356/vector/notes-on-the-swirl-music-decoration-element-isolated-on-the-white-background.jpg?s=612x612&w=0&k=20&c=30dBa07rS6h1f2iHx4JzMPFEDAfb4sy9FdEvzRMXpBM=",
+                            category: row["Categoria"],
+                            location: row["Local"],
+                            city: row["Cidade"],
+                            obs: row["Obs"],
+                            state: row["UF"]
+                        })).filter(event => event.title && event.url && event.year);
+
+                        // Sort events by year, month, day in descending order
+                        events.sort((a, b) => {
+                            if (a.year !== b.year) return b.year - a.year;
+                            if (a.month !== b.month) return b.month - a.month;
+                            return b.day - a.day;
+                        });
+
+                        // Get unique years
+                        const years = [...new Set(events.map(event => event.year))];
+
+                        // Update filter buttons and render initial gallery
+                        document.getElementById('loading').classList.add('hidden');
+                        updateFilterButtons(years);
+                        renderGallery(events);
+                    },
+                    error: err => {
+                        console.error('Erro ao parsear CSV:', err);
+                        document.getElementById('loading').textContent = 'Erro ao carregar eventos.';
+                    }
+                });
+            })
+            .catch(err => {
+                console.error('Erro ao carregar CSV:', err);
+                document.getElementById('loading').textContent = 'Erro ao carregar eventos.';
+            });
+    </script>
+</body>
+
+</html>
