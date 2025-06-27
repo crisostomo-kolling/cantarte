@@ -118,7 +118,7 @@
                     const categoryClass = event.category ? `badge badge-${event.category.toLowerCase().replace('ç', 'c').replace('ã', 'a')}` : '';
                     const categoryBadge = event.category ? `<span class="${categoryClass}">${event.category}</span>` : '';
                     const location = event.location ? `<p class="text-gray-600">Local: ${event.location}</p>` : '';
-                    const obs = event.location ? `<p class="text-gray-600" style="font-size: small;">${event.obs}</p>` : '';
+                    const obs = event.obs ? `<p class="text-gray-600" style="font-size: small;">${event.obs}</p>` : '';
                     const cityState = event.city && event.state ? `<p class="text-gray-600">Cidade: ${event.city}, ${event.state}</p>` : '';
                     card.innerHTML = `
                         <a href="${event.url}" target="_blank" class="text-blue-500"><img src="${event.preview}" 
