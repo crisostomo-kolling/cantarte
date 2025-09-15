@@ -114,7 +114,7 @@
                 groupedByYear[year].forEach(event => {
                     const card = document.createElement('div');
                     card.className = 'card bg-white rounded-lg shadow-md p-6';
-                    const dateStr = (event.month > 1 || event.day > 1) ? ` (${event.month.toString().padStart(2, '0')}/${event.day.toString().padStart(2, '0')})` : '';
+                    const dateStr = (event.month > 1 || event.day > 1) ? ` (${event.day.toString().padStart(2, '0')}/${event.month.toString().padStart(2, '0')})` : '';
                     const categoryClass = event.category ? `badge badge-${event.category.toLowerCase().replace('ç', 'c').replace('ã', 'a')}` : '';
                     const categoryBadge = event.category ? `<span class="${categoryClass}">${event.category}</span>` : '';
                     const location = event.location ? `<p class="text-gray-600">Local: ${event.location}</p>` : '';
@@ -225,3 +225,4 @@
 </body>
 
 </html>
+
