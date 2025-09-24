@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Galeria de Eventos Cantarte</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     <link rel="icon" type="image/svg+xml"
         href="https://raw.githubusercontent.com/feathericons/feather/master/icons/music.svg">
     <script src="https://unpkg.com/papaparse@latest/papaparse.min.js"></script>
@@ -78,12 +79,43 @@
             background-color: #3b82f6;
             color: white;
         }
+
+        .search-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        #search-input {
+            padding-right: 2.5rem;
+        }
+
+        #clear-search {
+            position: absolute;
+            right: 0.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #9ca3af;
+            transition: color 0.2s ease;
+        }
+
+        #clear-search:hover {
+            color: #4b5563;
+        }
     </style>
 </head>
 
 <body class="min-h-screen flex flex-col items-center justify-center py-10">
     <div class="container mx-auto px-4">
         <h1 class="text-4xl font-bold text-center text-gray-800 mb-6">Galeria de Eventos Cantarte</h1>
+        <div id="search-container" class="mb-6 hidden">
+            <div class="search-wrapper">
+                <input type="text" id="search-input" placeholder="Pesquisar por título, local, etc..." class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring focus:border-blue-300">
+                <button id="clear-search" class="hidden">
+                    <i class="fas fa-times-circle"></i>
+                </button>
+            </div>
+        </div>
         <div id="filter-buttons" class="flex flex-wrap justify-center mb-6"></div>
         <div id="loading" class="text-center text-gray-600">Carregando eventos...</div>
         <div id="gallery" class="hidden"></div>
@@ -91,20 +123,20 @@
     <script>
         let events = [];
         let currentFilter = 'all';
+        const searchInput = document.getElementById('search-input');
+        const clearSearchBtn = document.getElementById('clear-search');
 
         function renderGallery(filteredEvents) {
             const gallery = document.getElementById('gallery');
             gallery.innerHTML = '';
             gallery.classList.remove('hidden');
 
-            // Group events by year
             const groupedByYear = filteredEvents.reduce((acc, event) => {
                 if (!acc[event.year]) acc[event.year] = [];
                 acc[event.year].push(event);
                 return acc;
             }, {});
 
-            // Render events
             Object.keys(groupedByYear).sort((a, b) => b - a).forEach(year => {
                 const yearSection = document.createElement('div');
                 yearSection.className = 'year-section';
@@ -114,17 +146,23 @@
                 groupedByYear[year].forEach(event => {
                     const card = document.createElement('div');
                     card.className = 'card bg-white rounded-lg shadow-md p-6';
-                    const dateStr = (event.month > 1 || event.day > 1) ? ` (${event.day.toString().padStart(2, '0')}/${event.month.toString().padStart(2, '0')})` : '';
+
+                    const dateStr = (event.displayDay && event.month) ? ` (${event.displayDay}/${event.month.toString().padStart(2, '0')})` : '';
                     const categoryClass = event.category ? `badge badge-${event.category.toLowerCase().replace('ç', 'c').replace('ã', 'a')}` : '';
                     const categoryBadge = event.category ? `<span class="${categoryClass}">${event.category}</span>` : '';
                     const location = event.location ? `<p class="text-gray-600">Local: ${event.location}</p>` : '';
                     const obs = event.obs ? `<p class="text-gray-600" style="font-size: small;">${event.obs}</p>` : '';
                     const cityState = event.city && event.state ? `<p class="text-gray-600">Cidade: ${event.city}, ${event.state}</p>` : '';
+                    const programLink = event.program ? `<a href="${event.program}" target="_blank" download class="text-red-500 hover:text-red-700 ml-2" title="Download do Programa"><i class="fas fa-file-pdf"></i></a>` : '';
+                    
                     card.innerHTML = `
                         <a href="${event.url}" target="_blank" class="text-blue-500"><img src="${event.preview}" 
                         onerror="this.src='https://media.istockphoto.com/id/873697356/vector/notes-on-the-swirl-music-decoration-element-isolated-on-the-white-background.jpg?s=612x612&w=0&k=20&c=30dBa07rS6h1f2iHx4JzMPFEDAfb4sy9FdEvzRMXpBM='"
                         alt="${event.title}" class="preview-img mb-4">
-                        <h3 class="text-xl font-semibold text-gray-700">${event.title}${dateStr}</h3>
+                        <div class="flex items-center">
+                            <h3 class="text-xl font-semibold text-gray-700">${event.title}${dateStr}</h3>
+                            ${programLink}
+                        </div>
                         ${obs}
                         ${categoryBadge}
                         ${location}
@@ -132,17 +170,18 @@
                         </a>
                     `;
                     grid.appendChild(card);
-                    console.log(event.title);
-                    console.log(event);
                 });
                 yearSection.appendChild(grid);
                 gallery.appendChild(yearSection);
             });
         }
 
-        function updateFilterButtons(years) {
+        function updateFilterButtons(filteredEvents) {
             const filterButtons = document.getElementById('filter-buttons');
             filterButtons.innerHTML = '';
+            
+            const years = [...new Set(filteredEvents.map(event => event.year))];
+            
             const allButton = document.createElement('button');
             allButton.className = `filter-button ${currentFilter === 'all' ? 'active' : ''}`;
             allButton.textContent = 'Todos';
@@ -150,29 +189,56 @@
                 currentFilter = 'all';
                 document.querySelectorAll('.filter-button').forEach(btn => btn.classList.remove('active'));
                 allButton.classList.add('active');
-                renderGallery(events);
+                renderGallery(filteredEvents);
             };
             filterButtons.appendChild(allButton);
 
             years.sort((a, b) => b - a).forEach(year => {
-                const yearCount = events.filter(event => event.year === year).length;
+                const yearCount = filteredEvents.filter(event => event.year === year).length;
                 const button = document.createElement('button');
                 button.className = `filter-button ${currentFilter === year ? 'active' : ''}`;
                 button.textContent = `${year} (${yearCount})`;
-                //button.textContent = year;
                 button.onclick = () => {
                     currentFilter = year;
                     document.querySelectorAll('.filter-button').forEach(btn => btn.classList.remove('active'));
                     button.classList.add('active');
-                    const filteredEvents = events.filter(event => event.year === parseInt(year));
-                    renderGallery(filteredEvents);
+                    const yearFilteredEvents = filteredEvents.filter(event => event.year === parseInt(year));
+                    renderGallery(yearFilteredEvents);
                 };
                 filterButtons.appendChild(button);
             });
         }
+        
+        function filterEvents(searchTerm) {
+            const lowerCaseSearchTerm = searchTerm.toLowerCase();
+            if (!lowerCaseSearchTerm) {
+                renderGallery(events);
+                updateFilterButtons(events);
+                clearSearchBtn.classList.add('hidden');
+                return;
+            }
+            
+            const filtered = events.filter(event => 
+                Object.values(event).some(value => 
+                    value && String(value).toLowerCase().includes(lowerCaseSearchTerm)
+                )
+            );
+            
+            currentFilter = 'all';
+            renderGallery(filtered);
+            updateFilterButtons(filtered);
+            clearSearchBtn.classList.remove('hidden');
+        }
 
-        // Fetch CSV from Google Sheets
-        // Substitua a linha do fetch por:
+        searchInput.addEventListener('input', (e) => {
+            filterEvents(e.target.value);
+        });
+
+        clearSearchBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            filterEvents('');
+        });
+
         fetch('https://api.codetabs.com/v1/proxy/?quest=https://docs.google.com/spreadsheets/d/e/2PACX-1vR574JBcsphPozakpQEpz4BqG0eCBuoxTHlONDof5If3j7YH0fQPYeSKCJbIP7F23BXDFFOV7rGRvbQ/pub?output=csv')
             .then(response => response.text())
             .then(csvData => {
@@ -184,31 +250,29 @@
                     complete: (results) => {
                         events = results.data.map(row => ({
                             title: row["Titulo"],
+                            obs: row["Obs"],
                             year: parseInt(row["Ano"]) || 0,
                             month: parseInt(row["Mês"]) || 1,
                             day: parseInt(row["Dia"]) || 1,
+                            displayDay: row["DiaExibir"],
                             url: row["Link"],
                             preview: row["Capa"] || "https://media.istockphoto.com/id/873697356/vector/notes-on-the-swirl-music-decoration-element-isolated-on-the-white-background.jpg?s=612x612&w=0&k=20&c=30dBa07rS6h1f2iHx4JzMPFEDAfb4sy9FdEvzRMXpBM=",
                             category: row["Categoria"],
                             location: row["Local"],
                             city: row["Cidade"],
-                            obs: row["Obs"],
-                            state: row["UF"]
+                            state: row["UF"],
+                            program: row["Programa"]
                         })).filter(event => event.title && event.url && event.year);
 
-                        // Sort events by year, month, day in descending order
                         events.sort((a, b) => {
                             if (a.year !== b.year) return b.year - a.year;
                             if (a.month !== b.month) return b.month - a.month;
                             return b.day - a.day;
                         });
 
-                        // Get unique years
-                        const years = [...new Set(events.map(event => event.year))];
-
-                        // Update filter buttons and render initial gallery
                         document.getElementById('loading').classList.add('hidden');
-                        updateFilterButtons(years);
+                        document.getElementById('search-container').classList.remove('hidden');
+                        updateFilterButtons(events);
                         renderGallery(events);
                     },
                     error: err => {
@@ -225,4 +289,3 @@
 </body>
 
 </html>
-
