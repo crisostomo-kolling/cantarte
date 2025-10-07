@@ -5,9 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta property="og:image" content="https://crisostomo-kolling.github.io/cantarte/cantarte-logo-transparente.png" />
-    <meta property="og:description" content="Explore e compartilhe os álbuns do Cantarte, Coro Lírico! Envie suas fotos e reviva os melhores momentos de nossos eventos em um espaço dedicado à nossa comunidade." />
+    <meta property="og:description"
+        content="Explore e compartilhe os álbuns do Cantarte, Coro Lírico! Envie suas fotos e reviva os melhores momentos de nossos eventos em um espaço dedicado à nossa comunidade." />
     <meta property="og:title" content="Galeria de álbuns de fotos do CANTARTE" />
-    
+
     <title>Galeria de Eventos Cantarte</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
@@ -47,8 +48,10 @@
             font-weight: 600;
             color: white;
             margin-top: 0.5rem;
+            margin-right: 0.5rem;
         }
 
+        /* Cores para Categoria */
         .badge-apresentacao {
             background-color: #DC143C;
         }
@@ -64,6 +67,46 @@
         .badge-ensaio {
             background-color: #f59e0b;
         }
+
+        .badge-viagem {
+            background-color: #9333ea;
+        }
+
+        .badge-youtube {
+            background-color: #ff0000;
+        }
+
+        .badge-gravacoes {
+            background-color: #00bcd4;
+        }
+
+        /* Nova Classe para 'Ópera' */
+        .badge-opera {
+            background-color: #795548;
+            /* Marrom/Terracota para Ópera */
+        }
+
+        /* Cores para Tipo */
+        .badge-tipo {
+            background-color: #808080;
+        }
+
+        .badge-tipo-oficial {
+            background-color: #007bff;
+        }
+
+        .badge-tipo-extra {
+            background-color: #ffc107;
+        }
+
+        .badge-tipo-album {
+            background-color: #008080;
+        }
+
+        .badge-tipo-link {
+            background-color: #ff4500;
+        }
+
 
         .filter-button {
             padding: 0.5rem 1rem;
@@ -114,7 +157,8 @@
         <h1 class="text-4xl font-bold text-center text-gray-800 mb-6">Galeria de Eventos Cantarte</h1>
         <div id="search-container" class="mb-6 hidden">
             <div class="search-wrapper">
-                <input type="text" id="search-input" placeholder="Pesquisar por título, local, etc..." class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring focus:border-blue-300">
+                <input type="text" id="search-input" placeholder="Pesquisar por título, local, etc..."
+                    class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring focus:border-blue-300">
                 <button id="clear-search" class="hidden">
                     <i class="fas fa-times-circle"></i>
                 </button>
@@ -129,6 +173,19 @@
         let currentFilter = 'all';
         const searchInput = document.getElementById('search-input');
         const clearSearchBtn = document.getElementById('clear-search');
+
+        // FUNÇÃO PADRÃO E ROBUSTA PARA TRATAR ACENTOS (TRANSFORMA 'ÓPERA' EM 'opera')
+        function cleanStringForClass(str) {
+            if (!str) return '';
+            // 1. Converte para minúsculas
+            // 2. Normaliza a string (NFD) para separar base e acento
+            // 3. Remove os caracteres diacríticos (acentos)
+            // 4. Remove espaços e caracteres não-alfanuméricos
+            return str.toLowerCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/[^a-z0-9]/g, '');
+        }
 
         function renderGallery(filteredEvents) {
             const gallery = document.getElementById('gallery');
@@ -152,13 +209,22 @@
                     card.className = 'card bg-white rounded-lg shadow-md p-6';
 
                     const dateStr = (event.displayDay && event.month) ? ` (${event.displayDay}/${event.month.toString().padStart(2, '0')})` : '';
-                    const categoryClass = event.category ? `badge badge-${event.category.toLowerCase().replace('ç', 'c').replace('ã', 'a')}` : '';
+
+                    // Lógica para o chip de Categoria (usa a função de limpeza)
+                    const cleanCategory = cleanStringForClass(event.category);
+                    const categoryClass = cleanCategory ? `badge badge-${cleanCategory}` : '';
                     const categoryBadge = event.category ? `<span class="${categoryClass}">${event.category}</span>` : '';
+
+                    // Lógica para o novo chip de Tipo (usa a função de limpeza)
+                    const cleanType = cleanStringForClass(event.type);
+                    const typeClass = cleanType ? `badge badge-tipo-${cleanType}` : 'badge badge-tipo';
+                    const typeBadge = event.type ? `<span class="${typeClass}">${event.type}</span>` : '';
+
                     const location = event.location ? `<p class="text-gray-600">Local: ${event.location}</p>` : '';
                     const obs = event.obs ? `<p class="text-gray-600" style="font-size: small;">${event.obs}</p>` : '';
                     const cityState = event.city && event.state ? `<p class="text-gray-600">Cidade: ${event.city}, ${event.state}</p>` : '';
                     const programLink = event.program ? `<a href="${event.program}" target="_blank" download class="text-red-500 hover:text-red-700 ml-2" title="Download do Programa"><i class="fas fa-file-pdf"></i></a>` : '';
-                    
+
                     card.innerHTML = `
                         <a href="${event.url}" target="_blank" class="text-blue-500"><img src="${event.preview}" 
                         onerror="this.src='https://media.istockphoto.com/id/873697356/vector/notes-on-the-swirl-music-decoration-element-isolated-on-the-white-background.jpg?s=612x612&w=0&k=20&c=30dBa07rS6h1f2iHx4JzMPFEDAfb4sy9FdEvzRMXpBM='"
@@ -168,7 +234,10 @@
                             ${programLink}
                         </div>
                         ${obs}
-                        ${categoryBadge}
+                        <div class="flex flex-wrap"> 
+                            ${categoryBadge}
+                            ${typeBadge} 
+                        </div>
                         ${location}
                         ${cityState}
                         </a>
@@ -183,9 +252,9 @@
         function updateFilterButtons(filteredEvents) {
             const filterButtons = document.getElementById('filter-buttons');
             filterButtons.innerHTML = '';
-            
+
             const years = [...new Set(filteredEvents.map(event => event.year))];
-            
+
             const allButton = document.createElement('button');
             allButton.className = `filter-button ${currentFilter === 'all' ? 'active' : ''}`;
             allButton.textContent = 'Todos';
@@ -193,7 +262,7 @@
                 currentFilter = 'all';
                 document.querySelectorAll('.filter-button').forEach(btn => btn.classList.remove('active'));
                 allButton.classList.add('active');
-                renderGallery(filteredEvents);
+                renderGallery(events);
             };
             filterButtons.appendChild(allButton);
 
@@ -206,13 +275,13 @@
                     currentFilter = year;
                     document.querySelectorAll('.filter-button').forEach(btn => btn.classList.remove('active'));
                     button.classList.add('active');
-                    const yearFilteredEvents = filteredEvents.filter(event => event.year === parseInt(year));
+                    const yearFilteredEvents = events.filter(event => event.year === parseInt(year));
                     renderGallery(yearFilteredEvents);
                 };
                 filterButtons.appendChild(button);
             });
         }
-        
+
         function filterEvents(searchTerm) {
             const lowerCaseSearchTerm = searchTerm.toLowerCase();
             if (!lowerCaseSearchTerm) {
@@ -221,13 +290,13 @@
                 clearSearchBtn.classList.add('hidden');
                 return;
             }
-            
-            const filtered = events.filter(event => 
-                Object.values(event).some(value => 
+
+            const filtered = events.filter(event =>
+                Object.values(event).some(value =>
                     value && String(value).toLowerCase().includes(lowerCaseSearchTerm)
                 )
             );
-            
+
             currentFilter = 'all';
             renderGallery(filtered);
             updateFilterButtons(filtered);
@@ -262,6 +331,7 @@
                             url: row["Link"],
                             preview: row["Capa"] || "https://media.istockphoto.com/id/873697356/vector/notes-on-the-swirl-music-decoration-element-isolated-on-the-white-background.jpg?s=612x612&w=0&k=20&c=30dBa07rS6h1f2iHx4JzMPFEDAfb4sy9FdEvzRMXpBM=",
                             category: row["Categoria"],
+                            type: row["Tipo"],
                             location: row["Local"],
                             city: row["Cidade"],
                             state: row["UF"],
@@ -293,4 +363,3 @@
 </body>
 
 </html>
-
